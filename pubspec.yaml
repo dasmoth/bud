@@ -1,0 +1,9 @@
+name: bud
+author: Thomas Down
+description: BioSequence Utilies in Dart
+dependencies:
+  zlib:
+    path: ../Zlib
+
+#dependencies:
+#  unittest: any
