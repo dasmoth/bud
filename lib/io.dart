@@ -29,7 +29,16 @@ class ByteStream {
   int getInt32()  => data.getInt32(_incr(4), endian);
   int getUint32() => data.getUint32(_incr(4), endian);
   int getInt64()  => data.getInt64(_incr(8), endian);
-  int getUint64() => data.getUint64(_incr(8), endian);
+  
+  // This doesn't work in dart2js :-(
+  // int getUint64() => data.getUint64(_incr(8), endian);
+  int getUint64() {
+    int a = getUint32();
+    int b = getUint32();
+    return (b<<32) | a;
+  }
+  
+  
   double getFloat32() => data.getFloat32(_incr(4), endian);
   double getFloat64() => data.getFloat64(_incr(8), endian);
   
