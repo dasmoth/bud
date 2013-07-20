@@ -1,4 +1,4 @@
-library io;
+library io_host;
 
 import 'dart:typed_data';
 import 'dart:async';
@@ -18,6 +18,10 @@ class FileResource extends Resource {
   FileResource(File f) : _raf = f.openSync();
   
   Future<ByteBuffer> fetch([int start, int end]) {
+    if (end == null)
+      end = _raf.lengthSync();
+    if (start == null)
+      start = 0;
     return _raf.setPosition(start)
         .then((r) => r.read(end - start))
         .then((l) => new Uint8List.fromList(l).buffer);
