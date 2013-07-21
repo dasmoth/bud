@@ -55,7 +55,7 @@ ByteBuffer _unbgzf(ByteBuffer bb) {
   List<int> bbAsArray = new Int8List.view(bb);
   
   ByteStream bs = new ByteStream(bb, endian: Endianness.LITTLE_ENDIAN);
-  while (bs.pointer < bb.lengthInBytes) {
+  while (bs.pointer < bb.lengthInBytes - 500) {
     bs.skip(10);
     int xlen = bs.getUint16();
     bs.skip(xlen);
@@ -69,6 +69,8 @@ ByteBuffer _unbgzf(ByteBuffer bb) {
     blocks.add(ib);
     
     bs.pointer = inf.currentPosition + 8; // Skip len and checksum.
+    
+    // print('pointer=${bs.pointer}, limit=${bb.lengthInBytes}');
   }
   
   Uint8List merged = new Uint8List(tot);
@@ -182,20 +184,27 @@ class _TIF implements TabixIndexedFile {
         return new Future.value(lines);
       }
       _Chunk c = mchunks[ci];
-      int fmin = c.start >> 16;
-      int fmax = (c.end >> 16);
+      
+      // The divisions here are horrific, but seem to be the simplest
+      // thing that generates working code with dart2js.  Switch back
+      // to using shifts if we ever stop supporting Javascript.
+      
+      int fmin = c.start ~/ 0x10000;
+      int fmax = (c.end ~/ 0x10000);
       
       int lii;
       for (lii = 0; lii < idx.lindex.length; ++lii) {
-        if ((idx.lindex[lii]>>16) > fmax)
+        if ((idx.lindex[lii] ~/ 0x10000) > fmax)
           break;
       }
       
       if (lii >= idx.lindex.length) {
         fmax = null;
       } else {
-        fmax = idx.lindex[lii]>>16;
+        fmax = idx.lindex[lii] ~/ 0x10000;
       }
+      
+      print('fmin=${fmin.toRadixString(16)} fmax=${fmax.toRadixString(16)}');
       
       return target.fetch(fmin, fmax)
           .then((ByteBuffer b) {

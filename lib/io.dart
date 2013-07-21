@@ -35,7 +35,11 @@ class ByteStream {
   int getUint64() {
     int a = getUint32();
     int b = getUint32();
-    return (b<<32) | a;
+    
+    int x = (b * 0x100000000) + a;
+    
+    // print('a=${a.toRadixString(16)} b=${b.toRadixString(16)} x=${x.toRadixString(16)}');
+    return x;
   }
   
   
