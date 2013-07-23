@@ -204,7 +204,7 @@ class _TIF implements TabixIndexedFile {
         fmax = idx.lindex[lii] ~/ 0x10000;
       }
       
-      print('fmin=${fmin.toRadixString(16)} fmax=${fmax.toRadixString(16)}');
+      // print('fmin=${fmin.toRadixString(16)} fmax=${fmax.toRadixString(16)}');
       
       return target.fetch(fmin, fmax)
           .then((ByteBuffer b) {
@@ -212,7 +212,7 @@ class _TIF implements TabixIndexedFile {
             
             for (String l in unc.split('\n')) {
               List<String> toks = l.split('\t');
-              if (toks[colSeq - 1] == chr) {
+              if (toks[colSeq - 1] == chr && toks.length > colEnd) {
                 int fmin = int.parse(toks[colStart - 1]);
                 int fmax = int.parse(toks[colEnd - 1]);
                 if ((format&0x10000) != 0) ++fmin;
