@@ -24,7 +24,7 @@ class _Chunk {
   _Chunk(this.start, this.end);
   
   int compareTo(o) => start - o.start;
-  String toString() => '[${start.toRadixString(16)}..${end.toRadixString(16)}]';
+  String toString() => '[${start.toRadixString(16)}..${end.toRadixString(16)} (${end-start + 1})]';
   
 }
 
@@ -42,20 +42,23 @@ List<int> doInflate(Inflater inf) {
 
   // Start the inflation.
   var i = 1;
-  while (i > 0) {
+  while (i > 0 && inf.currentPosition < inf.inflateData.length) {
     i = inf.inflateInternalEntry(buffer, buffer.length, 1024);
   }
 
   return buffer;
 }
 
-ByteBuffer _unbgzf(ByteBuffer bb) {
+ByteBuffer _unbgzf(ByteBuffer bb, [int maxChunkIndex]) {
+  if (maxChunkIndex == null)
+    maxChunkIndex = bb.lengthInBytes - 50;
+  
   List<List<int>> blocks = <List<int>>[];
   int tot = 0;
   List<int> bbAsArray = new Int8List.view(bb);
   
   ByteStream bs = new ByteStream(bb, endian: Endianness.LITTLE_ENDIAN);
-  while (bs.pointer < bb.lengthInBytes - 50) {
+  while (bs.pointer <= maxChunkIndex) {
     bs.skip(10);
     int xlen = bs.getUint16();
     bs.skip(xlen);
@@ -77,6 +80,11 @@ ByteBuffer _unbgzf(ByteBuffer bb) {
   int ptr = 0;
   for (var block in blocks) {
     merged.setAll(ptr, block);
+    // for (int bi = 0; bi < block.length; ++bi) {
+    //   var bib = block[bi];
+    //   if (bib != null)
+    //     merged[ptr + bi] = bib;
+    // }
     ptr += block.length;
   }
   
@@ -149,13 +157,24 @@ class _TIF implements TabixIndexedFile {
     if (idx == null)
       throw 'No index for reference sequence $chr';
     
+    int minLinBin = minp ~/ 16384;
+    int maxLinBin = min(idx.lindex.length - 1, maxp ~/ 16384);
+    int minChunk = 0;
+    for (int linbin = minLinBin; linbin <= maxLinBin; ++linbin) 
+      minChunk = min(minChunk, idx.lindex[linbin]);
+    
     List<int> bins = _reg2bins(minp, maxp);
     // print('Bins: $bins');
     
-    List<int> chunks = <int>[];
+    List<_Chunk> chunks = <_Chunk>[];
     for (int b in bins) {
       var bc = idx.bindex[b];
-      if (bc != null) chunks.addAll(bc);
+      if (bc != null) {
+        for (_Chunk c in bc) {
+          if (c.start >= minChunk)
+            chunks.add(c);
+        }
+      }
     }
     chunks.sort();
     
@@ -190,24 +209,23 @@ class _TIF implements TabixIndexedFile {
       
       int fmin = c.start ~/ 0x10000;
       int fmax = (c.end ~/ 0x10000);
+      int offsetOfLastChunkStart = fmax - fmin;
       
       int lii;
-      for (lii = 0; lii < idx.lindex.length; ++lii) {
+      for (lii = maxLinBin; lii < idx.lindex.length; ++lii) {
         if ((idx.lindex[lii] ~/ 0x10000) > fmax)
           break;
       }
       
       if (lii >= idx.lindex.length) {
-        fmax = null;
+        fmax = fmin + 0x10000;   // Fixme can we set a smarter bound?
       } else {
         fmax = idx.lindex[lii] ~/ 0x10000;
       }
       
-      // print('fmin=${fmin.toRadixString(16)} fmax=${fmax.toRadixString(16)}');
-      
       return target.fetch(fmin, fmax)
           .then((ByteBuffer b) {
-            String unc = new String.fromCharCodes(new Uint8List.view(_unbgzf(b), c.start & 0xffff));
+            String unc = new String.fromCharCodes(new Uint8List.view(_unbgzf(b, offsetOfLastChunkStart), c.start & 0xffff));
             
             for (String l in unc.split('\n')) {
               List<String> toks = l.split('\t');
