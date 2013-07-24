@@ -55,7 +55,7 @@ ByteBuffer _unbgzf(ByteBuffer bb) {
   List<int> bbAsArray = new Int8List.view(bb);
   
   ByteStream bs = new ByteStream(bb, endian: Endianness.LITTLE_ENDIAN);
-  while (bs.pointer < bb.lengthInBytes - 500) {
+  while (bs.pointer < bb.lengthInBytes - 50) {
     bs.skip(10);
     int xlen = bs.getUint16();
     bs.skip(xlen);
@@ -91,7 +91,6 @@ class _TIF implements TabixIndexedFile {
   
   _TIF(ByteBuffer zidx, Resource this.target) {
     ByteBuffer idx = _unbgzf(zidx);
-    
     
     ByteStream ibs = new ByteStream(idx, endian: Endianness.LITTLE_ENDIAN);
     int magic = ibs.getUint32();
