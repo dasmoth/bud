@@ -15,6 +15,8 @@ class _Strand implements Strand {
   final String token;
   
   const _Strand(this.ori, this.token);
+  
+  String toString() => token;
 }
 
 class GFFRecord {
@@ -72,11 +74,28 @@ class GFFRecord {
     }
     
     if (toks.length > 8) {
-      record.attributes = Uri.splitQueryString(toks[8]);
+      record.attributes = _splitQueryStringGFF3(toks[8]);
     }
     
     return record;
   }
+  
+  static Map<String, String> _splitQueryStringGFF3(
+      String query) {
+    return query.split(";").fold({}, (map, element) {
+      int index = element.indexOf("=");
+      if (index == -1) {
+        if (element != "") map[Uri.decodeQueryComponent(element)] = "";
+      } else if (index != 0) {
+        var key = element.substring(0, index);
+        var value = element.substring(index + 1);
+        map[Uri.decodeQueryComponent(key)] =
+            Uri.decodeQueryComponent(value);
+      }
+      return map;
+    });
+  }
+
   
   String toString() {
     List l = [
@@ -89,7 +108,21 @@ class GFFRecord {
       strand != null ? strand : '.', 
       phase != null ? phase : '.'];
     if (attributes != null && !attributes.isEmpty) {
-      l.add('query stuff');
+      var result = new StringBuffer();
+      var first = true;
+      attributes.forEach((key, value) {
+        if (!first) {
+          result.write(";");
+        }
+        first = false;
+        result.write(Uri.encodeQueryComponent(key));
+        if (value != null && !value.isEmpty) {
+          result.write("=");
+          result.write(Uri.encodeQueryComponent(value));
+        }
+      });
+      l.add(result.toString());
+    
     }
     
     return l.join('\t');
