@@ -19,6 +19,6 @@ void main() {
       })
       .then((lines) {
         for (String l in lines)
-          print(GFFRecord.parse(l));
+          print(GFFRecord.parse(l, 2));
       });
 }

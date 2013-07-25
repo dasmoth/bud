@@ -15,6 +15,7 @@ abstract class TabixIndexedFile {
   }
   
   Future<List<String>> fetch(String chr, int min, int max);
+  Iterable<String> get seqNames;
 }
 
 class _Chunk {
@@ -24,7 +25,7 @@ class _Chunk {
   _Chunk(this.start, this.end);
   
   int compareTo(o) => start - o.start;
-  String toString() => '[${start.toRadixString(16)}..${end.toRadixString(16)} (${end-start + 1})]';
+  String toString() => '[${start.toRadixString(16)}..${end.toRadixString(16)}]';
   
 }
 
@@ -151,6 +152,8 @@ class _TIF implements TabixIndexedFile {
     }
     
   }
+  
+  Iterable<String> get seqNames => indices.keys;
   
   Future<List<String>> fetch(String chr, int minp, int maxp) {
     _TabixIdx idx = indices[chr];
