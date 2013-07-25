@@ -31,7 +31,7 @@ class GFFRecord {
   
   Map<String,String> attributes = {};
   
-  static GFFRecord parse(String line) {
+  static GFFRecord parse(String line, [int format=3]) {
     List<String> toks = line.split('\t');
     if (toks.length <8 || toks.length >9)
       throw 'Incorrect number of tokens: ${toks.length}';
@@ -74,7 +74,10 @@ class GFFRecord {
     }
     
     if (toks.length > 8) {
-      record.attributes = _splitQueryStringGFF3(toks[8]);
+      if (format == 2) 
+        record.attributes = _splitQueryStringGFF2(toks[8]);
+      else
+        record.attributes = _splitQueryStringGFF3(toks[8]);
     }
     
     return record;
@@ -91,6 +94,22 @@ class GFFRecord {
         var value = element.substring(index + 1);
         map[Uri.decodeQueryComponent(key)] =
             Uri.decodeQueryComponent(value);
+      }
+      return map;
+    });
+  }
+  
+  static Map<String, String> _splitQueryStringGFF2(String query) {
+    return query.split(";").fold({}, (map, element) {
+      element = element.trim();
+      int index = element.indexOf(" ");
+      if (index == -1) {
+        if (element != "") map[element] = "";
+      } else if (index != 0) {
+        var key = element.substring(0, index);
+        var value = element.substring(index 
+            + 1);
+        map[key] = value.replaceAll('"', '');
       }
       return map;
     });

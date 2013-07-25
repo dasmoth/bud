@@ -3,6 +3,7 @@ library tabixtest;
 import 'package:bud/tabix.dart';
 import 'package:bud/io.dart';
 import 'package:bud/io_host.dart';
+import 'package:bud/gff.dart';
 
 import 'dart:io';
 
@@ -18,6 +19,6 @@ void main() {
       })
       .then((lines) {
         for (String l in lines)
-          print(l);
+          print(GFFRecord.parse(l));
       });
 }
