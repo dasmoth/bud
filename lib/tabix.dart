@@ -234,7 +234,9 @@ class _TIF implements TabixIndexedFile {
               List<String> toks = l.split('\t');
               if (toks[colSeq - 1] == chr && toks.length > colEnd) {
                 int fmin = int.parse(toks[colStart - 1]);
-                int fmax = int.parse(toks[colEnd - 1]);
+                int fmax = fmin;
+                if (colEnd > 0) 
+                  int fmax = int.parse(toks[colEnd - 1]);
                 if ((format&0x10000) != 0) ++fmin;
                 if (fmin <= maxp && fmax >= minp)
                   lines.add(l);
