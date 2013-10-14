@@ -24,7 +24,7 @@ class VCFRecord {
     r.id = toks[2];
     r.ref = toks[3];
     r.alt = toks[4];
-    r.quality = double.parse(toks[5]);
+    r.quality = double.parse(toks[5], (s) => double.NAN);
     r.filter = toks[6];
     if (toks.length > 7) 
       r.info = Uri.splitQueryString(toks[7]);

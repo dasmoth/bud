@@ -226,6 +226,9 @@ class _TIF implements TabixIndexedFile {
         fmax = idx.lindex[lii] ~/ 0x10000;
       }
       
+      
+      // print('Fetching $fmin:$fmax');
+      
       return target.fetch(fmin, fmax)
           .then((ByteBuffer b) {
             String unc = new String.fromCharCodes(new Uint8List.view(_unbgzf(b, offsetOfLastChunkStart), c.start & 0xffff));
@@ -238,6 +241,9 @@ class _TIF implements TabixIndexedFile {
                 if (colEnd > 0) 
                   int fmax = int.parse(toks[colEnd - 1]);
                 if ((format&0x10000) != 0) ++fmin;
+                
+                // print(fmin);
+                
                 if (fmin <= maxp && fmax >= minp)
                   lines.add(l);
               }
