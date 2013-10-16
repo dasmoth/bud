@@ -20,48 +20,64 @@ void main() {
     throw 'Missing required option: file';
   }
   
-  TabixIndexedFile.open(new FileResource(new File("$fileName.tbi")),
-                        new FileResource(new File(fileName)))
-    .then((TabixIndexedFile tif) {
-      print('File opened');
-      HttpServer.bind('127.0.0.1', port).then((HttpServer server) {
-        server.listen((HttpRequest req) {
-          req.response.done.catchError((e) => print('$e'));
-          
-          var res = req.response;
-          var qp = req.uri.queryParameters;
-          String chrName = qp['chr'];
-          String minStr = qp['min'];
-          String maxStr = qp['max'];
-          
-          print(new Map.from(qp));
-          
-          if (chrName != null && minStr != null && maxStr != null) {
-            int min = int.parse(minStr), max = int.parse(maxStr);
-            tif.fetch(chrName, min, max).then((List<String> lines) {
-              List<Map> records = [];
-              List<List<String>> genotypes = [];
-              for (VCFRecord r in lines.map(VCFRecord.parse)) {
+  HttpServer.bind('127.0.0.1', port).then((HttpServer server) {
+    server.listen((HttpRequest req) {
+      req.response.done.catchError((e) => print('$e'));
+      
+      var res = req.response;
+      res.headers.set('Access-Control-Allow-Origin', '*');
+      
+      var qp = req.uri.queryParameters;
+      String chrName = qp['chr'];
+      String minStr = qp['min'];
+      String maxStr = qp['max'];
+      String refSnp = qp['ref'];
+      
+      print(new Map.from(qp));
+      
+      if (chrName != null && minStr != null && maxStr != null) {
+        int min = int.parse(minStr), max = int.parse(maxStr);
+
+        Process.start('/Users/thomas/Software/tabix/tabix',
+                      [fileName, '$chrName:$min-$max'])
+          .then((Process proc) {
+            List<Map> records = [];
+            List<List<String>> genotypes = [];
+            List<String> ref;
+            
+            proc.stdout
+              .transform(new AsciiDecoder())
+              .transform(new LineSplitter())
+              .listen((String line) {
+                VCFRecord r = VCFRecord.parse(line);
                 records.add({'min': r.pos,
-                             'max': r.pos,
-                             'name': r.id});
-                genotypes.add(new List.from(r.genotypes.map((s) => s.substring(2, 3))));
-              }
-              
-              List<String> ref = genotypes[0];
-              for (int i = 0; i < records.length; ++i) {
-                records[i]['score'] = ld(genotypes[i], ref);
-              }
-              res.write(JSON.encode(records));
-              res.close();
-            });
-          } else {
-            res.write('Bad request');
-            res.close();
-          }
-        });
-      });
+                  'max': r.pos,
+                  'id': r.id,
+                  'score': 0});
+                List<String> genotype = new List.from(r.genotypes.map((s) => s.substring(2, 3)));
+                genotypes.add(genotype);
+                if (r.id == refSnp)
+                  ref = genotype;
+              }, onDone: () {
+                if (ref != null){
+                  for (int i = 0; i < records.length; ++i) {
+                    double r = ld(genotypes[i], ref);
+                    if (!r.isNaN)
+                      records[i]['score'] = r.abs();
+                  }
+                }
+                
+                res.write(JSON.encode(records));
+                res.close();
+              });
+            
+          });
+      } else {
+        res.write('Bad request');
+        res.close();
+      }
     });
+  });
 }
 
 double ld(List<String> a, List<String> b) {
